@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Aug 18 14:15:47 2017
+
+@author: mlague
+
+Sensitivities datm/dlnd and dlnd/datm (and r2) for global perturbation simulations
+of albedo, roughness, and evaporative resistance (lid resistance; do total 
+effective resistance elsewhere), for annual mean and seasonal. 
+
+Or thats the goal, anyhow.
+
+"""
+
+#%%
+
+# netcdf/numpy/xarray
+import numpy as np
+import netCDF4 as nc
+import numpy.matlib
+import datetime
+import xarray as xr
+from scipy import interpolate
+from numpy import ma
+from scipy import stats
+import scipy.io as sio
+#import cpickle as pickle
+import pickle as pickle
+from sklearn import linear_model
+
+import time
+
+from joblib import Parallel, delayed
+import multiprocessing
+
+# Plotting
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap, cm
+import brewer2mpl as cbrew
+
+# OS interaction
+import os
+import sys
+
+from IPython.display import display
+from IPython.display import HTML
+import IPython.core.display as di # Example: di.display_html('<h3>%s:</h3>' % str, raw=True)
+
+from mml_mapping_fun import mml_map
+from custom_python_mml_cmap import make_colormap, mml_cmap
+
+#from planar import BoundingBox
+
+# Avoid having to restart the kernle if I modify my mapping scripts (or anything else)
+import imp
+#imp.reload(mml_map)
+#imp.reload(mml_map_NA)
+#imp.reload(mml_neon_box)
+import matplotlib.colors as mcolors
+
+#%%
