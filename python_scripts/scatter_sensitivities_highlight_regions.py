@@ -808,7 +808,7 @@ for prop in ['rs']:
         
         plt.show()   
         
-        filename = 'sensitivity_rs_vs_bucket_fullness_locations)'
+        filename = 'sensitivity_rs_vs_bucket_fullness_locations'
         fig_png = figpath+'/sensitivity/scatter_plots/'+filename+'.png'
 
         fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
@@ -895,7 +895,7 @@ for prop in ['rs']:
         
         plt.show()   
         
-        filename = 'sensitivity_rs_vs_precip_locations)'
+        filename = 'sensitivity_rs_vs_precip_locations'
         fig_png = figpath+'/sensitivity/scatter_plots/'+filename+'.png'
 
         fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
@@ -936,7 +936,7 @@ yvar = ygrid.flatten()
 units['precip'] = 'mm/yr'    #ds0['PRECC'].units
 
 
-for prop in ['rs']:
+for prop in sfc_props:
     
     for sea in ['ANN']:
     
@@ -944,7 +944,7 @@ for prop in ['rs']:
         datm_dlnd = zgrid.flatten()
         
         cvar = datm_dlnd
-        units['datm_dlnd'] = '[K] / [10 s/m]'
+        units['datm_dlnd'] = '[K] / [10 prop units]'
         
     
         fig, ax = plt.subplots(1, 1, figsize=(6,6))
@@ -952,12 +952,12 @@ for prop in ['rs']:
         cm_scat = plt.cm.get_cmap('viridis')
         cm_scat = plt.cm.get_cmap('RdYlBu')
         # plot scatter:
-        scat = plt.scatter(x=xvar,y=yvar,c=cvar,alpha=0.3, cmap=plt.cm.viridis_r )  #,cmap = cm_scat)
+        scat = plt.scatter(x=xvar,y=yvar,c=cvar,alpha=0.3, cmap=plt.cm.viridis_r ,edgecolor = 'None')  #,cmap = cm_scat)
         
         cb = plt.colorbar(scat)
     
         #cb = plt.colorbar(scat)
-        cb.set_label('Atmospheric Sensitivity d (T2m) / d (rs) , '+units['datm_dlnd'])
+        cb.set_label('Atmospheric Sensitivity d (T2m) / d ('+prop+') , '+units['datm_dlnd'])
     
     
         ax.set_xlim([0,200])
@@ -965,7 +965,7 @@ for prop in ['rs']:
         
         ax.set_xlabel('Annual Mean Water in Bucket ('+units['water']+')')
         ax.set_ylabel('Annual Mean PRECIP ('+units['precip']+')')
-        plt.title('Sensitivity (rs) dependence on PRECIP and Ground Water')
+        plt.title('Sensitivity ('+prop+') dependence on PRECIP and Ground Water')
         
 #        # add on scatter of region locations
 #        for reg in region_names:
@@ -995,7 +995,7 @@ for prop in ['rs']:
         
         plt.show()   
         
-        filename = 'sensitivity_rs_precip_water_locations)'
+        filename = 'sensitivity_'+prop+'_precip_water'
         fig_png = figpath+'/sensitivity/scatter_plots/'+filename+'.png'
 
         fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
@@ -1005,281 +1005,47 @@ for prop in ['rs']:
         plt.close()
     
         
-        
-        
 #%%
 """
         Sensitivity to evaporative resistane against bucket fullness
             yvar: annual mean precip
-            xvar: annual mean water ( in baseline a2 hc0.1 rs100 run )
-            color: dT2m / d rs
+            xvar: annual mean temperatures ( in baseline a2 hc0.1 rs100 run )
+            color: 0.1 dT2m / d  sfc props
 """
     
 units = {}
 
 dsl0 = ds_clm['global_a2_cv2_hc0.1_rs100_cheyenne']
 
-ctrl_water = dsl0['MML_water'].values
-ann_water = np.nanmean(ctrl_water,0) * no_glc
-xvar = ann_water.flatten()
-
-units['water'] = dsl0['MML_water'].units
-
-ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
-
-ctrl_trefht = (  ds0['TREFHT'].values  )
-ann_trefht = np.nanmean(ctrl_trefht,0) * no_glc
-yvar = ann_trefht.flatten()
-
-yvar = yvar
-
-units['trefht'] = ds0['TREFHT'].units
-
-
-for prop in ['rs']:
-    
-    for sea in ['ANN']:
-    
-        datm_dlnd = np.array(slope[sea][prop]).flatten()
-        
-        cvar = datm_dlnd*10
-        units['datm_dlnd'] = '[K] / [10 s/m]'
-        
-    
-        fig, ax = plt.subplots(1, 1, figsize=(6,6))
-        
-        cm_scat = plt.cm.get_cmap('viridis')
-        cm_scat = plt.cm.get_cmap('RdYlBu')
-        # plot scatter:
-        scat = plt.scatter(x=xvar,y=yvar,c=cvar,alpha=0.3, cmap=plt.cm.viridis_r )  #,cmap = cm_scat)
-        
-        cb = plt.colorbar(scat)
-    
-        #cb = plt.colorbar(scat)
-        cb.set_label('Atmospheric Sensitivity d (T2m) / d (rs) , '+units['datm_dlnd'])
-    
-    
-        ax.set_xlim([0,200])
-        #ax.set_ylim([-0.005,])
-        
-        ax.set_xlabel('Annual Mean Water in Bucket ('+units['water']+')')
-        ax.set_ylabel('Annual Mean T2m ('+units['trefht']+')')
-        plt.title('Yo')
-        
-        # Add no-fill circles with red outline on top of existing scatter
-        """
-            Australia box:
-                        ind_left = 48
-                        ind_right = 59
-                        ind_top = 37
-                        ind_bot = 31
-        """
-        
-        ind_left = 48
-        ind_right = 59
-        ind_top = 37
-        ind_bot = 31
-                        
-                        
-        AUS_ann_water = ( np.nanmean(ctrl_water,0)[ind_bot:ind_top,ind_left:ind_right] *
-                             no_glc[ind_bot:ind_top,ind_left:ind_right] )
-        AUS_xvar = AUS_ann_water.flatten()
-        
-        AUS_ann_fsnsc = (np.nanmean(ctrl_trefht,0)[ind_bot:ind_top,ind_left:ind_right] *
-                             no_glc[ind_bot:ind_top,ind_left:ind_right] )
-        AUS_yvar = AUS_ann_fsnsc.flatten()
-        
-        AUS_datm_dlnd = np.array(slope[sea][prop][ind_bot:ind_top,ind_left:ind_right]).flatten()
-        
-        AUS_cvar = AUS_datm_dlnd*10
-        
-        aus = plt.scatter(x=AUS_xvar,y=AUS_yvar,s=20,alpha=0.9, edgecolors='r',facecolors='none' )  #,cmap = cm_scat)
-        
-        
-        plt.show()
-    
-#%%
-"""
-        Sensitivity to evaporative resistane against bucket fullness
-            yvar: annual mean precip
-            xvar: annual mean water ( in baseline a2 hc0.1 rs100 run )
-            color: dT2m / d rs
-"""
-    
-units = {}
-
-dsl0 = ds_clm['global_a2_cv2_hc0.1_rs100_cheyenne']
-
-ctrl_water = dsl0['MML_water'].values
-ann_water = np.nanmean(ctrl_water,0) * no_glc
-xvar = ann_water.flatten()
-
-units['water'] = dsl0['MML_water'].units
-
-ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
-
-ctrl_trefht = (  ds0['TREFHT'].values  )
-ann_trefht = np.nanmean(ctrl_trefht,0) * no_glc
-yvar = ann_trefht.flatten()
-
-yvar = yvar
+ctrl_x = ds0['FSNS'].values
+ann_x = np.nanmean(ctrl_x,0) * no_glc
+xgrid = ann_x
+xvar = xgrid.flatten()
 
 units['FSNS'] = ds0['FSNS'].units
 
-
-for prop in ['rs']:
-    
-    for sea in ['ANN']:
-    
-        datm_dlnd = np.array(slope[sea][prop]).flatten()
-        
-        cvar = datm_dlnd*10
-        units['datm_dlnd'] = '[K] / [10 s/m]'
-        
-    
-        fig, ax = plt.subplots(1, 1, figsize=(6,6))
-        
-        cm_scat = plt.cm.get_cmap('viridis')
-        cm_scat = plt.cm.get_cmap('RdYlBu')
-        # plot scatter:
-        scat = plt.scatter(x=xvar,y=yvar,s=20,c=cvar,alpha=0.3, cmap=plt.cm.viridis_r )  #,cmap = cm_scat)
-        
-        cb = plt.colorbar(scat)
-    
-        #cb = plt.colorbar(scat)
-        cb.set_label('Atmospheric Sensitivity d (T2m) / d (rs) , '+units['datm_dlnd'])
-    
-    
-        ax.set_xlim([0,200])
-        #ax.set_ylim([-0.005,])
-        
-        ax.set_xlabel('Annual Mean Water in Bucket ('+units['water']+')')
-        ax.set_ylabel('Annual Mean FSNS ('+units['FSNS']+')')
-        plt.title('Yo')
-        
-        
-        # Add no-fill circles with red outline on top of existing scatter
-        """
-            Australia box:
-                        ind_left = 48
-                        ind_right = 59
-                        ind_top = 37
-                        ind_bot = 31
-        """
-        
-        ind_left = 48
-        ind_right = 59
-        ind_top = 37
-        ind_bot = 31
-                        
-                        
-        AUS_ann_water = ( np.nanmean(ctrl_water,0)[ind_bot:ind_top,ind_left:ind_right] *
-                             no_glc[ind_bot:ind_top,ind_left:ind_right] )
-        AUS_xvar = AUS_ann_water.flatten()
-        
-        AUS_ann_fsnsc = (np.nanmean(ctrl_trefht,0)[ind_bot:ind_top,ind_left:ind_right] *
-                             no_glc[ind_bot:ind_top,ind_left:ind_right] )
-        AUS_yvar = AUS_ann_fsnsc.flatten()
-        
-        AUS_datm_dlnd = np.array(slope[sea][prop][ind_bot:ind_top,ind_left:ind_right]).flatten()
-        
-        AUS_cvar = AUS_datm_dlnd*10
-        
-        aus = plt.scatter(x=AUS_xvar,y=AUS_yvar,s=20,alpha=0.9, edgecolors='r',facecolors='none' )  #,cmap = cm_scat)
-        
-        
-        plt.show()        
-                
-        
-        
-        
-        
-        
-        
-        #%%
-"""
-        Sensitivity to evaporative resistane against precip (should look like fullness)
-            yvar: dT2m / d rs
-            xvar: annual mean precip ( in baseline a2 hc0.1 rs100 run )
-"""
-    
-units = {}
-
 ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
 
 ctrl_precip = (  ds0['PRECC'].values + ds0['PRECL'].values + 
                   ds0['PRECSC'].values + ds0['PRECSL'].values )
-ann_precip = np.nanmean(ctrl_precip,0)
-xvar = ann_precip.flatten()
+ann_precip = np.nanmean(ctrl_precip,0) * no_glc * ms2mmyr
+ygrid = ann_precip
+yvar = ygrid.flatten()
 
-ms2mmyr = 1000*60*60*24*365
-
-xvar = ms2mmyr*xvar
-
-units['precip'] = 'mm/year' #ds0['PRECC'].units
-
-
-for prop in ['rs']:
-    
-    for sea in ['ANN']:
-    
-        datm_dlnd = np.array(slope[sea][prop]).flatten()
-        
-        yvar = datm_dlnd*10
-        units['datm_dlnd'] = '[K] / [10 s/m]'
-    
-        fig, ax = plt.subplots(1, 1, figsize=(4,4))
-        
-        # plot scatter:
-        p1 = ax.scatter(xvar,yvar,s=10,color='blue',alpha=0.1)
-        
-        ax.set_xlim([min(xvar),max(xvar)])
-        #ax.set_ylim([-0.005,])
-        
-        ax.set_xlabel('Annual Mean Precip ('+units['precip']+')')
-        ax.set_ylabel('Sensitivity d(T2m)/d(r_s) ('+units['datm_dlnd']+')')
-        plt.title('Yo')
-    
-        plt.show()
-        
-#%%
-"""
-        Sensitivity to evaporative resistane against bucket fullness
-            yvar: annual mean precip
-            xvar: annual mean water ( in baseline a2 hc0.1 rs100 run )
-            color: dT2m / d rs
-"""
-    
-units = {}
-
-dsl0 = ds_clm['global_a2_cv2_hc0.1_rs100_cheyenne']
-
-ctrl_water = dsl0['MML_water'].values
-ann_water = np.nanmean(ctrl_water,0)
-xvar = ann_water.flatten()
-
-units['water'] = dsl0['MML_water'].units
-
-ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
-
-ctrl_precip = (  ds0['PRECC'].values + ds0['PRECL'].values + 
-                  ds0['PRECSC'].values + ds0['PRECSL'].values )
-ann_precip = np.nanmean(ctrl_precip,0)
-yvar = ann_precip.flatten()
-
-yvar = yvar*ms2mmyr
+#yvar = yvar*ms2mmyr
 
 units['precip'] = 'mm/yr'    #ds0['PRECC'].units
 
 
-for prop in ['rs']:
+for prop in sfc_props:
     
     for sea in ['ANN']:
     
-        datm_dlnd = np.array(slope[sea][prop]).flatten()
+        zgrid = np.array(slope[sea][prop]) * 10
+        datm_dlnd = zgrid.flatten()
         
-        cvar = datm_dlnd*10
-        units['datm_dlnd'] = '[K] / [10 s/m]'
+        cvar = datm_dlnd
+        units['datm_dlnd'] = '[K] / [10 prop units]'
         
     
         fig, ax = plt.subplots(1, 1, figsize=(6,6))
@@ -1287,24 +1053,486 @@ for prop in ['rs']:
         cm_scat = plt.cm.get_cmap('viridis')
         cm_scat = plt.cm.get_cmap('RdYlBu')
         # plot scatter:
-        scat = plt.scatter(x=xvar,y=yvar,c=cvar,alpha=0.3, cmap=plt.cm.viridis_r )  #,cmap = cm_scat)
+        scat = plt.scatter(x=xvar,y=yvar,c=cvar,alpha=0.3, cmap=plt.cm.viridis_r ,edgecolor = 'None')  #,cmap = cm_scat)
         
         cb = plt.colorbar(scat)
     
         #cb = plt.colorbar(scat)
-        cb.set_label('Atmospheric Sensitivity d (T2m) / d (rs) , '+units['datm_dlnd'])
+        cb.set_label('Atmospheric Sensitivity d (T2m) / d ('+prop+') , '+units['datm_dlnd'])
     
     
         ax.set_xlim([0,200])
         #ax.set_ylim([-0.005,])
         
-        ax.set_xlabel('Annual Mean Water in Bucket ('+units['water']+')')
+        ax.set_xlabel('Annual Mean Absorbed Solar Radiation ('+units['FSNS']+')')
         ax.set_ylabel('Annual Mean PRECIP ('+units['precip']+')')
-        plt.title('Yo')
+        plt.title('Sensitivity ('+prop+') dependence on PRECIP and FSNS')
+        
+#        # add on scatter of region locations
+#        for reg in region_names:
+#            
+#            ind_bot = regions[reg]['ind_bot']
+#            ind_top = regions[reg]['ind_top']
+#            ind_left = regions[reg]['ind_west']
+#            ind_right = regions[reg]['ind_east']
+#            
+#            col = regions[reg]['col']
+#            
+#            
+#            reg_xgrid = ( xgrid[ind_bot:ind_top,ind_left:ind_right] )# *
+#                             #no_glc[ind_bot:ind_top,ind_left:ind_right] )
+#            reg_xvar = reg_xgrid.flatten()
+#        
+#            reg_ygrid = (ygrid[ind_bot:ind_top,ind_left:ind_right] )#*
+#                             #no_glc[ind_bot:ind_top,ind_left:ind_right] )
+#            reg_yvar = reg_ygrid.flatten()
+#
+#            plt.scatter(x=reg_xvar,y=reg_yvar,s=20,alpha=0.9, edgecolors=col,facecolors='none' , label = reg)  #,cmap = cm_scat)
         
         
-        plt.show()
+        # get handles and plot legend
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles,labels,bbox_to_anchor=(1.35,1),loc=2,borderaxespad=0.)
+        
+        plt.show()   
+        
+        filename = 'sensitivity_'+prop+'_precip_fsns'
+        fig_png = figpath+'/sensitivity/scatter_plots/'+filename+'.png'
+
+        fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
+                    edgecolor='w',orientation='portrait',bbox_inches='tight', 
+                    pad_inches=0.1,frameon=None)
+
+        plt.close()
     
+                
+        
+#%%  
+        
+        
+#%%   
+"""
+    Spatial scatter (esp for roughness) of sensitivity dT2m/dhc vs r^2 -> where / how many points just don't fit? 
+"""
+
+#%%
+"""
+        Sensitivity to evaporative resistane against bucket fullness
+            yvar: annual mean precip
+            xvar: annual mean water ( in baseline a2 hc0.1 rs100 run )
+            color: dT2m / d rs
+"""
+    
+units = {}
+
+dsl0 = ds_clm['global_a2_cv2_hc0.1_rs100_cheyenne']
+
+ctrl_water = dsl0['MML_water'].values
+ann_water = np.nanmean(ctrl_water,0) * no_glc
+xgrid = ann_water
+xvar = xgrid.flatten()
+
+units['water'] = dsl0['MML_water'].units
+
+ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
+
+ctrl_precip = (  ds0['PRECC'].values + ds0['PRECL'].values + 
+                  ds0['PRECSC'].values + ds0['PRECSL'].values )
+ann_precip = np.nanmean(ctrl_precip,0) * no_glc * ms2mmyr
+ygrid = ann_precip
+yvar = ygrid.flatten()
+
+#yvar = yvar*ms2mmyr
+
+units['precip'] = 'mm/yr'    #ds0['PRECC'].units
+
+
+for prop in sfc_props:
+    
+    for sea in ['ANN']:
+    
+        zgrid = np.array(slope[sea][prop]) * 10
+        datm_dlnd = zgrid.flatten()
+        
+        cvar = datm_dlnd
+        units['datm_dlnd'] = '[K] / [10 prop units]'
+        
+        ygrid = np.array(slope[sea][prop]) * no_glc
+        yvar = ygrid.flatten()
+        
+        xgrid = np.array(r_value[sea][prop]) * no_glc
+        xvar = xgrid.flatten()
+        
+    
+        fig, ax = plt.subplots(1, 1, figsize=(6,6))
+        
+        cm_scat = plt.cm.get_cmap('viridis')
+        cm_scat = plt.cm.get_cmap('RdYlBu')
+        # plot scatter:
+        scat = plt.scatter(x=xvar,y=yvar,alpha=0.3,edgecolor = 'None')  #,cmap = cm_scat)
+        
+        #cb = plt.colorbar(scat)
+    
+        #cb = plt.colorbar(scat)
+        #cb.set_label('Atmospheric Sensitivity d (T2m) / d ('+prop+') , '+units['datm_dlnd'])
+    
+    
+        #ax.set_xlim([0,200])
+        #ax.set_ylim([-0.005,])
+        
+        ax.set_xlabel('r^2 (linearity of fit)')
+        ax.set_ylabel('Sensitivity dT2m/dlnd for ' + prop )
+        plt.title('Sensitivity ('+prop+') vs linearity')
+        
+#        # add on scatter of region locations
+#        for reg in region_names:
+#            
+#            ind_bot = regions[reg]['ind_bot']
+#            ind_top = regions[reg]['ind_top']
+#            ind_left = regions[reg]['ind_west']
+#            ind_right = regions[reg]['ind_east']
+#            
+#            col = regions[reg]['col']
+#            
+#            
+#            reg_xgrid = ( xgrid[ind_bot:ind_top,ind_left:ind_right] )# *
+#                             #no_glc[ind_bot:ind_top,ind_left:ind_right] )
+#            reg_xvar = reg_xgrid.flatten()
+#        
+#            reg_ygrid = (ygrid[ind_bot:ind_top,ind_left:ind_right] )#*
+#                             #no_glc[ind_bot:ind_top,ind_left:ind_right] )
+#            reg_yvar = reg_ygrid.flatten()
+#
+#            plt.scatter(x=reg_xvar,y=reg_yvar,s=20,alpha=0.9, edgecolors=col,facecolors='none' , label = reg)  #,cmap = cm_scat)
+        
+        
+        # get handles and plot legend
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles,labels,bbox_to_anchor=(1.35,1),loc=2,borderaxespad=0.)
+        
+        plt.show()   
+        
+        filename = 'sensitivity_'+prop+'_vs_r2'
+        fig_png = figpath+'/sensitivity/scatter_plots/'+filename+'.png'
+
+        fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
+                    edgecolor='w',orientation='portrait',bbox_inches='tight', 
+                    pad_inches=0.1,frameon=None)
+
+        plt.close()
+    
+
+
+#%%      
+        
+        
+#%%       
+        
+        
+#%%
+"""
+        Sensitivity to evaporative resistane against bucket fullness
+            yvar: annual mean precip
+            xvar: annual mean water ( in baseline a2 hc0.1 rs100 run )
+            color: dT2m / d rs
+"""
+    
+#units = {}
+#
+#dsl0 = ds_clm['global_a2_cv2_hc0.1_rs100_cheyenne']
+#
+#ctrl_water = dsl0['MML_water'].values
+#ann_water = np.nanmean(ctrl_water,0) * no_glc
+#xvar = ann_water.flatten()
+#
+#units['water'] = dsl0['MML_water'].units
+#
+#ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
+#
+#ctrl_trefht = (  ds0['TREFHT'].values  )
+#ann_trefht = np.nanmean(ctrl_trefht,0) * no_glc
+#yvar = ann_trefht.flatten()
+#
+#yvar = yvar
+#
+#units['trefht'] = ds0['TREFHT'].units
+#
+#
+#for prop in ['rs']:
+#    
+#    for sea in ['ANN']:
+#    
+#        datm_dlnd = np.array(slope[sea][prop]).flatten()
+#        
+#        cvar = datm_dlnd*10
+#        units['datm_dlnd'] = '[K] / [10 s/m]'
+#        
+#    
+#        fig, ax = plt.subplots(1, 1, figsize=(6,6))
+#        
+#        cm_scat = plt.cm.get_cmap('viridis')
+#        cm_scat = plt.cm.get_cmap('RdYlBu')
+#        # plot scatter:
+#        scat = plt.scatter(x=xvar,y=yvar,c=cvar,alpha=0.3, cmap=plt.cm.viridis_r )  #,cmap = cm_scat)
+#        
+#        cb = plt.colorbar(scat)
+#    
+#        #cb = plt.colorbar(scat)
+#        cb.set_label('Atmospheric Sensitivity d (T2m) / d (rs) , '+units['datm_dlnd'])
+#    
+#    
+#        ax.set_xlim([0,200])
+#        #ax.set_ylim([-0.005,])
+#        
+#        ax.set_xlabel('Annual Mean Water in Bucket ('+units['water']+')')
+#        ax.set_ylabel('Annual Mean T2m ('+units['trefht']+')')
+#        plt.title('Yo')
+#        
+#        # Add no-fill circles with red outline on top of existing scatter
+#        """
+#            Australia box:
+#                        ind_left = 48
+#                        ind_right = 59
+#                        ind_top = 37
+#                        ind_bot = 31
+#        """
+#        
+#        ind_left = 48
+#        ind_right = 59
+#        ind_top = 37
+#        ind_bot = 31
+#                        
+#                        
+#        AUS_ann_water = ( np.nanmean(ctrl_water,0)[ind_bot:ind_top,ind_left:ind_right] *
+#                             no_glc[ind_bot:ind_top,ind_left:ind_right] )
+#        AUS_xvar = AUS_ann_water.flatten()
+#        
+#        AUS_ann_fsnsc = (np.nanmean(ctrl_trefht,0)[ind_bot:ind_top,ind_left:ind_right] *
+#                             no_glc[ind_bot:ind_top,ind_left:ind_right] )
+#        AUS_yvar = AUS_ann_fsnsc.flatten()
+#        
+#        AUS_datm_dlnd = np.array(slope[sea][prop][ind_bot:ind_top,ind_left:ind_right]).flatten()
+#        
+#        AUS_cvar = AUS_datm_dlnd*10
+#        
+#        aus = plt.scatter(x=AUS_xvar,y=AUS_yvar,s=20,alpha=0.9, edgecolors='r',facecolors='none' )  #,cmap = cm_scat)
+#        
+#        
+#        plt.show()
+#    
+##%%
+#"""
+#        Sensitivity to evaporative resistane against bucket fullness
+#            yvar: annual mean precip
+#            xvar: annual mean water ( in baseline a2 hc0.1 rs100 run )
+#            color: dT2m / d rs
+#"""
+#    
+#units = {}
+#
+#dsl0 = ds_clm['global_a2_cv2_hc0.1_rs100_cheyenne']
+#
+#ctrl_water = dsl0['MML_water'].values
+#ann_water = np.nanmean(ctrl_water,0) * no_glc
+#xvar = ann_water.flatten()
+#
+#units['water'] = dsl0['MML_water'].units
+#
+#ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
+#
+#ctrl_trefht = (  ds0['TREFHT'].values  )
+#ann_trefht = np.nanmean(ctrl_trefht,0) * no_glc
+#yvar = ann_trefht.flatten()
+#
+#yvar = yvar
+#
+#units['FSNS'] = ds0['FSNS'].units
+#
+#
+#for prop in ['rs']:
+#    
+#    for sea in ['ANN']:
+#    
+#        datm_dlnd = np.array(slope[sea][prop]).flatten()
+#        
+#        cvar = datm_dlnd*10
+#        units['datm_dlnd'] = '[K] / [10 s/m]'
+#        
+#    
+#        fig, ax = plt.subplots(1, 1, figsize=(6,6))
+#        
+#        cm_scat = plt.cm.get_cmap('viridis')
+#        cm_scat = plt.cm.get_cmap('RdYlBu')
+#        # plot scatter:
+#        scat = plt.scatter(x=xvar,y=yvar,s=20,c=cvar,alpha=0.3, cmap=plt.cm.viridis_r )  #,cmap = cm_scat)
+#        
+#        cb = plt.colorbar(scat)
+#    
+#        #cb = plt.colorbar(scat)
+#        cb.set_label('Atmospheric Sensitivity d (T2m) / d (rs) , '+units['datm_dlnd'])
+#    
+#    
+#        ax.set_xlim([0,200])
+#        #ax.set_ylim([-0.005,])
+#        
+#        ax.set_xlabel('Annual Mean Water in Bucket ('+units['water']+')')
+#        ax.set_ylabel('Annual Mean FSNS ('+units['FSNS']+')')
+#        plt.title('Yo')
+#        
+#        
+#        # Add no-fill circles with red outline on top of existing scatter
+#        """
+#            Australia box:
+#                        ind_left = 48
+#                        ind_right = 59
+#                        ind_top = 37
+#                        ind_bot = 31
+#        """
+#        
+#        ind_left = 48
+#        ind_right = 59
+#        ind_top = 37
+#        ind_bot = 31
+#                        
+#                        
+#        AUS_ann_water = ( np.nanmean(ctrl_water,0)[ind_bot:ind_top,ind_left:ind_right] *
+#                             no_glc[ind_bot:ind_top,ind_left:ind_right] )
+#        AUS_xvar = AUS_ann_water.flatten()
+#        
+#        AUS_ann_fsnsc = (np.nanmean(ctrl_trefht,0)[ind_bot:ind_top,ind_left:ind_right] *
+#                             no_glc[ind_bot:ind_top,ind_left:ind_right] )
+#        AUS_yvar = AUS_ann_fsnsc.flatten()
+#        
+#        AUS_datm_dlnd = np.array(slope[sea][prop][ind_bot:ind_top,ind_left:ind_right]).flatten()
+#        
+#        AUS_cvar = AUS_datm_dlnd*10
+#        
+#        aus = plt.scatter(x=AUS_xvar,y=AUS_yvar,s=20,alpha=0.9, edgecolors='r',facecolors='none' )  #,cmap = cm_scat)
+#        
+#        
+#        plt.show()        
+#                
+#        
+#        
+#        
+#        
+#        
+#        
+#        #%%
+#"""
+#        Sensitivity to evaporative resistane against precip (should look like fullness)
+#            yvar: dT2m / d rs
+#            xvar: annual mean precip ( in baseline a2 hc0.1 rs100 run )
+#"""
+#    
+#units = {}
+#
+#ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
+#
+#ctrl_precip = (  ds0['PRECC'].values + ds0['PRECL'].values + 
+#                  ds0['PRECSC'].values + ds0['PRECSL'].values )
+#ann_precip = np.nanmean(ctrl_precip,0)
+#xvar = ann_precip.flatten()
+#
+#ms2mmyr = 1000*60*60*24*365
+#
+#xvar = ms2mmyr*xvar
+#
+#units['precip'] = 'mm/year' #ds0['PRECC'].units
+#
+#
+#for prop in ['rs']:
+#    
+#    for sea in ['ANN']:
+#    
+#        datm_dlnd = np.array(slope[sea][prop]).flatten()
+#        
+#        yvar = datm_dlnd*10
+#        units['datm_dlnd'] = '[K] / [10 s/m]'
+#    
+#        fig, ax = plt.subplots(1, 1, figsize=(4,4))
+#        
+#        # plot scatter:
+#        p1 = ax.scatter(xvar,yvar,s=10,color='blue',alpha=0.1)
+#        
+#        ax.set_xlim([min(xvar),max(xvar)])
+#        #ax.set_ylim([-0.005,])
+#        
+#        ax.set_xlabel('Annual Mean Precip ('+units['precip']+')')
+#        ax.set_ylabel('Sensitivity d(T2m)/d(r_s) ('+units['datm_dlnd']+')')
+#        plt.title('Yo')
+#    
+#        plt.show()
+#        
+##%%
+#"""
+#        Sensitivity to evaporative resistane against bucket fullness
+#            yvar: annual mean precip
+#            xvar: annual mean water ( in baseline a2 hc0.1 rs100 run )
+#            color: dT2m / d rs
+#"""
+#    
+#units = {}
+#
+#dsl0 = ds_clm['global_a2_cv2_hc0.1_rs100_cheyenne']
+#
+#ctrl_water = dsl0['MML_water'].values
+#ann_water = np.nanmean(ctrl_water,0)
+#xvar = ann_water.flatten()
+#
+#units['water'] = dsl0['MML_water'].units
+#
+#ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
+#
+#ctrl_precip = (  ds0['PRECC'].values + ds0['PRECL'].values + 
+#                  ds0['PRECSC'].values + ds0['PRECSL'].values )
+#ann_precip = np.nanmean(ctrl_precip,0)
+#yvar = ann_precip.flatten()
+#
+#yvar = yvar*ms2mmyr
+#
+#units['precip'] = 'mm/yr'    #ds0['PRECC'].units
+#
+#
+#for prop in sfc_props:
+#    
+#    for sea in ['ANN']:
+#    
+#        datm_dlnd = np.array(slope[sea][prop]).flatten()
+#        
+#        cvar = datm_dlnd*10
+#        units['datm_dlnd'] = '[K] / [10 s/m]'
+#        
+#    
+#        fig, ax = plt.subplots(1, 1, figsize=(6,6))
+#        
+#        cm_scat = plt.cm.get_cmap('viridis')
+#        cm_scat = plt.cm.get_cmap('RdYlBu')
+#        # plot scatter:
+#        scat = plt.scatter(x=xvar,y=yvar,c=cvar,alpha=0.3, cmap=plt.cm.viridis_r )  #,cmap = cm_scat)
+#        
+#        cb = plt.colorbar(scat)
+#    
+#        #cb = plt.colorbar(scat)
+#        cb.set_label('Atmospheric Sensitivity d (T2m) / d (rs) , '+units['datm_dlnd'])
+#    
+#    
+#        ax.set_xlim([0,200])
+#        #ax.set_ylim([-0.005,])
+#        
+#        ax.set_xlabel('Annual Mean Water in Bucket ('+units['water']+')')
+#        ax.set_ylabel('Annual Mean PRECIP ('+units['precip']+')')
+#        plt.title('Yo')
+#        
+#        fig_png = figpath+'/sensitivity/scatter_plots/'+filename+'.png'
+#        fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait', 
+#                        frameon=None)
+#
+#        
+#        
+#        plt.show()
+#    
     
         
 #%%

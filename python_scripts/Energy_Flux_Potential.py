@@ -81,6 +81,131 @@ import imp
 #imp.reload(mml_neon_box)
 import matplotlib.colors as mcolors
 
+
+#%%
+
+#%% 
+        
+def get_MSE(z,T,q):
+    
+    # cam fileds: Z3 [m], T [K], Q [kg/kg]
+    
+    # Calculates Moist Static Energy as
+    # MSE = c_p * T + g * z + L_v * q
+    #       (internal) + (pot'l) + (latent heat due to wv)
+    #
+    # Where
+    #
+    # u and v are wind vector fields
+    # cp = heat capacity of dry air
+    # z is the height
+    # T is the absoulte temperature in K (not potential temperature)
+    # g is 9.81m/s2 (gravity)
+    # q is the water vapour (check units)  ----> [kg/kg]
+    # L_v is the latent heat of vapourization
+    
+    #  Joule = kg m2/s2
+    
+    g = 9.81    # m/s2
+    Lv = 2.257e6   # J/kg   (source: springer link and engineering toolbox)
+    cp = 1006      # J/kg/K
+    
+    
+    internal = cp * T     # [ J/kg/K ] * [ K ] = [ J/kg ] = [ kg m2 / s2] / [ kg ] = [ m2/s2 ]
+    potential = g * z     # [ m/s2 ] * [ m ] = [ m2/s2 ]
+    latent = Lv * q       # [ J/kg ] * [kg/kg] = [J/kg] = [ m2/s2 ]
+    
+    MSE  = internal + potential + latent
+    
+    
+
+    return MSE  
+
+def get_EFP(u,v,MSE,lat,lon,lev,ilev, area):
+    
+    # calculate the energy flux potential as described by equation 1 of Boose 2016
+    #
+    # Returns:
+    #
+    # EFP, the Energy Flux Potential X
+    # gradEFP, the gradient of the Energy Flux Potential, or the divergent part of 
+    #       atmospheric energy transport, 
+    # divEFP, the laplacian of Energy Flux Potential, which seasonally averaged should
+    #       equal the net energy input to the atmopsheric column
+    
+    # grad^2 X = grad . int_0^ps ( <u,v>*MSE/g ) dp
+    
+    # Inputs:
+    #   u   zonal wind (x direction, EW)        [m/s]
+    #   v   meridional wind (y direction, NS)   [m/s]
+    #   MSE moist static energy                 [m2/s2]
+    #   lat  degrees latitude
+    #   lon  degrees longitude
+    #   area area of gridcell (for integrating)  [m2]
+    #   lev pressure level                      [hpa] = 1000*[kg/m/s2]
+    #   ilev boundaries of pressure levels
+    
+    # Need dlat and dlon in m, vs degrees, which requires Earth's radius in m
+    r = 6378100     # [m]
+    
+    g = 9.81    # m/s2
+    
+    # delta lat & lon in degrees
+    dlat_d = np.diff(lat)
+    dlat_d = np.append(dlat_d,dlat_d[-1])
+    
+    dlon_d = np.diff(lon)
+    dlon_d = np.append(dlon_d,dlon_d[-1])
+    
+    # convert to delta lat & lon in m
+    dlat_m = r * (dlat_d*np.pi/180)
+    
+    #dlon_m = r * np.abs( np.cos(lon[1:]*np.pi/180.) - np.cos(lon[0:-1]*np.pi/180.) )
+    dlon_m = r * np.abs( np.cos(lat[1:]*np.pi/180.) - np.cos(lat[0:-1]*np.pi/180.) )
+    dlon_m = np.append(dlon_m,dlon_m[0])
+    
+    # default size: [12,30,96,144]
+    
+    integrand_u = np.array(u) * np.array(MSE) / g   # [] = [m/s] * [m2/s2] / [m/s2] = [m2/s]
+    integrand_v = np.array(v) * np.array(MSE) / g   # [] = [m/s] * [m2/s2] / [m/s2] = [m2/s]
+    
+    # reshape so 30 dimension is last - not SURE I'm doing this right. A "permute" function would be nice.
+    #integrand_u = np.reshape(integrand_u,[12,96,144,30])
+    #integrand_v = np.reshape(integrand_v,[12,96,144,30])
+    
+    dp = np.array( np.diff(ilev)*1000 )     # [ hpa ]*1000 ti [pa]
+    
+    # integrate wrt pressure
+    gradEFP_u = np.sum(integrand_u*dp[None,:,None,None],1)    # [] = [m2/s]*[pa]
+    gradEFP_v = np.sum(integrand_v*dp[None,:,None,None],1)    # [] = [m2/s]*[pa] = [kg m /s3]
+    
+    gradEFP = {}
+    gradEFP['u'] = gradEFP_u
+    gradEFP['v'] = gradEFP_v
+    
+    # instead of rollaxis, do *dlat[:,None]
+    
+    # integrate in x (u) and y (v) to get EFP
+    EFP={}
+    EFP['u'] = ((gradEFP_u)*dlon_m[None,None,:])    # check summing dimensino - should be x dir, 144
+    #gradEFP_v = np.rollaxis(gradEFP_v,1,start=3)*dlat_m[None,:,None]
+    EFP_v = (gradEFP_v)*dlat_m[None,:,None]
+
+    #EFP['v'] = np.rollaxis((gradEFP_v),2,1) 
+    EFP['v'] = EFP_v
+    print(np.shape(EFP['v']))
+    
+    # laplacian of EFP: d/dx2 + d/dy2 , already have dEFP/dz as gradEFP_u, so take d/dx of that
+    print(np.shape(gradEFP_u))
+    print(np.shape(dlon_m))
+    print(np.shape(gradEFP_v))
+    print(np.shape(dlat_m))
+    #divEFP= gradEFP_u/dlon_m[None,None,:] + np.reshape(np.reshape(gradEFP_v,[12,144,96])/dlat_m,[12,96,144])
+    divEFP = gradEFP_u/dlon_m[None,None,:] + gradEFP_v/dlat_m[None,:,None]
+    
+    return EFP, gradEFP, divEFP
+
+
 #%%
 """
 Initial Setup:
@@ -369,16 +494,16 @@ for prop in sfc_props:
         ds3 = ds_high[prop]
         
         # annual mean response
-        atm_resp_ann[prop] = [ds1.mean('time')[atm_var].values[:,:],
-            ds2.mean('time')[atm_var].values[:,:],
-            ds3.mean('time')[atm_var].values[:,:]]
+        atm_resp_ann[prop] = np.array([np.array(ds1.mean('time')[atm_var].values[:,:]),
+            np.array(ds2.mean('time')[atm_var].values[:,:]),
+            np.array(ds3.mean('time')[atm_var].values[:,:])])
         
         # seasonal responses:
         # (first, make 12 month response, then average over djf, jja, etc)
         #print(np.shape(ds1[atm_var].values))
-        resp_mths = np.array([ds1[atm_var].values[:,:,:],
-                ds2[atm_var].values[:,:,:],
-                ds3[atm_var].values[:,:,:]])
+        resp_mths = np.array([np.array(ds1[atm_var].values[:,:,:]),
+                np.array(ds2[atm_var].values[:,:,:]),
+                np.array(ds3[atm_var].values[:,:,:])])
         
         for sea in ['ANN']:
             for evar in energy_vars:
@@ -399,23 +524,23 @@ for prop in sfc_props:
         ds6 = ds_high2[prop]    #2
         
         # annual mean response
-        atm_resp_ann[prop] = [ds1.mean('time')[atm_var].values[:,:],
-            ds2.mean('time')[atm_var].values[:,:],
-            ds3.mean('time')[atm_var].values[:,:],
-            ds4.mean('time')[atm_var].values[:,:],
-            ds5.mean('time')[atm_var].values[:,:],
-            ds6.mean('time')[atm_var].values[:,:],
-            ]
+        atm_resp_ann[prop] = np.array([np.array(ds1.mean('time')[atm_var].values[:,:]),
+            np.array(ds2.mean('time')[atm_var].values[:,:]),
+            np.array(ds3.mean('time')[atm_var].values[:,:]),
+            np.array(ds4.mean('time')[atm_var].values[:,:]),
+            np.array(ds5.mean('time')[atm_var].values[:,:]),
+            np.array(ds6.mean('time')[atm_var].values[:,:]),
+            ])
     
         # seasonal responses:
         # (first, make 12 month response, then average over djf, jja, etc)
         #print(np.shape(ds1[atm_var].values))
-        resp_mths = np.array([ds1[atm_var].values[:,:,:],
-                ds2[atm_var].values[:,:,:],
-                ds3[atm_var].values[:,:,:],
-                ds4[atm_var].values[:,:,:],
-                ds5[atm_var].values[:,:,:],
-                ds6[atm_var].values[:,:,:],
+        resp_mths = np.array([np.array(ds1[atm_var].values[:,:,:]),
+                np.array(ds2[atm_var].values[:,:,:]),
+                np.array(ds3[atm_var].values[:,:,:]),
+                np.array(ds4[atm_var].values[:,:,:]),
+                np.array(ds5[atm_var].values[:,:,:]),
+                np.array(ds6[atm_var].values[:,:,:]),
                 ])
     
         
@@ -459,42 +584,83 @@ for prop in sfc_props:
 #print(atm_resp)
 #print(pert['alb'])
 
-#%% Plot differences in contours of northward energy flux (both on zonal mean line plots and conoutred lon maps)
+#%% Calculate the moist static energy for each model run
 
-flux = {}
-flux_zonal = {}
+MSE = {}
+ds_tree = {}
 
 i = 0
 
-for prop in sfc_props:
-    flux[prop] = np.zeros(np.shape(energy['ANN'][prop]['imbal']))
-    flux_zonal[prop] = np.zeros(np.shape(energy['ANN'][prop]['imbal'][:,:,0]))
-    
-    # loop over however many model runs we have
-    pert[prop] = sfc_prop_ranges[i]
-    
+sfc_props_mod = ['alb','rs','hc']
 
-    
-    if np.isnan(pert[prop][3]):
-        n = 3  
-    
-    else:
-        n = 5
+for prop in sfc_props_mod:
+    MSE[prop] = {}
+    ds_tree[prop] = {}
+
+    for sea in seasons:
+        MSE[prop][sea] = {}
+        ds_tree[prop][sea] = {}
         
-    for j in range(n):
+        
             
-            FSNT = energy['ANN'][prop]['FSNT'][j,:,:]
-            FLNT = energy['ANN'][prop]['FLNT'][j,:,:]
+        if prop == 'hc':
+            print(prop)
+            ds1 = ds_low1[prop] #0.01
+            ds2 = ds_low2[prop]  #0.05
+            ds3 = ds_med1[prop]  #0.1
+            ds4 = ds_med2[prop]    #0.5
+            ds5 = ds_high1[prop]    #1
+            ds6 = ds_high2[prop]    #
             
-            flx, flx_z = NE_flux(lat,lon,FSNT,FLNT,area_grid=area_f19,zonal_mean=True,stats=False)
+            ds_tree[prop][sea]['low'] = ds1
+            ds_tree[prop][sea]['med'] = ds3
+            ds_tree[prop][sea]['high'] = ds5
+        else:
+            print(prop)
+            ds1 = ds_low[prop]
+            ds2 = ds_med[prop]
+            ds3 = ds_high[prop]
             
-            flux[prop][j,:,:] = flx
-            flux_zonal[prop][j,:] = flx_z
+            ds_tree[prop][sea]['low'] = ds1
+            ds_tree[prop][sea]['med'] = ds2
+            ds_tree[prop][sea]['high'] = ds3
+        
+        i = i+1
 
-    
-    
-    i = i+1 
 
+
+#%%
+
+# Test the MSE and EPF functions:
+
+ds0 = ds_tree['alb']['ANN']['med']
+
+u = np.array(ds0['U'].values)
+v = np.array(ds0['V'].values)
+T = np.array(ds0['T'].values)
+z = np.array(ds0['Z3'].values)  # I think I probably should actuallly be using pressure coords like the model, translated into z
+q = np.array(ds0['Q'].values)
+
+lev = np.array(ds0['lev'].values)
+ilev = np.array(ds0['ilev'].values)
+
+MSE = np.array(get_MSE(z,T,q))
+
+#EFP, gradEFP, divEFP = get_EFP(u,v,MSE,lat,lon,lev,ilev, area=area_f19)
+
+MSE_ann = np.mean(MSE,0)
+
+z_ann = np.mean(z,0)
+
+dz = z_ann
+dz[1:30,:,:] = z_ann[1:30,:,:] - z_ann[0:29,:,:]
+
+MSE_ann_col_ish = np.sum(MSE_ann*dz,0)
+
+plt.imshow(MSE_ann_col_ish)
+plt.colorbar()
+plt.show()
+plt.close()
 
 #%% Take slope of TOA energy imbalance, call that flux_ptl for now...
 

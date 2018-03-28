@@ -499,9 +499,10 @@ ax = fig.add_axes([0.1,0.1,0.9,0.9])
 
 # alb
 prop = 'alb'
-d_flux_zonal = flux_zonal[prop][-1,:] - flux_zonal[prop][0,:]
+#d_flux_zonal = flux_zonal[prop][-1,:] - flux_zonal[prop][0,:]
+d_flux_zonal = flux_zonal[prop][0,:] - flux_zonal[prop][2,:]
 
-plt.plot(lat,d_flux_zonal,'blue',label=prop)
+plt.plot(lat,d_flux_zonal,'blue',label=prop+'( dark - light)')
         
         
 # hc
@@ -509,14 +510,14 @@ prop = 'hc'
 # some kind of issue here where entry 5 is zeros???? 
 d_flux_zonal = flux_zonal[prop][4,:] - flux_zonal[prop][0,:]
 
-plt.plot(lat,d_flux_zonal,'forestgreen',label=prop)
+plt.plot(lat,d_flux_zonal,'forestgreen',label=prop+'( tall - lighshortt)')
         
 
 # rs
 prop = 'rs'
 d_flux_zonal = flux_zonal[prop][-1,:] - flux_zonal[prop][0,:]
 
-plt.plot(lat,d_flux_zonal,'orange',label=prop)
+plt.plot(lat,d_flux_zonal,'orange',label=prop+'( high rs - low rs)')
         
           
     
@@ -691,7 +692,7 @@ plt.title('alb, highest; NE Transport')
     
 prop = 'alb'
     
-fig, axes = plt.subplots(1, 2, figsize=(10,6))
+fig, axes = plt.subplots(1, 3, figsize=(16,6))
 
 ax0 = axes.flatten()[0]
 plt.sca(ax0)
@@ -759,6 +760,40 @@ cb = plt.colorbar()
 plt.title('alb, highest; toa imbal')
   
 
+ax2 = axes.flatten()[2]
+plt.sca(ax2)
+
+mp = Basemap(projection='robin',lon_0=180.,lat_0 = 0) # can't make it start anywhere other than 180???
+mp.drawcoastlines()
+mp.drawmapboundary(fill_color='1.')  # make map background white
+parallels = np.arange(-90.,90,20.)
+mp.drawparallels(parallels,labels=[1,0,0,0],fontsize=10,linewidth=0.5,dashes=[1,2])
+meridians = np.arange(0.,360.,20.)
+mp.drawmeridians(meridians,linewidth=0.5,dashes=[1,2])
+ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
+cmap_abs = plt.cm.viridis
+clim_abs = [0.5,1]    
+    
+mapdata = energy['ANN'][prop]['imbal'][0,:,:] - energy['ANN'][prop]['imbal'][2,:,:]
+
+#grad = np.gradient(mapdata)
+#
+#abs_grad = np.sqrt(grad[0]**2 + grad[1]**2)
+
+#mapdata = np.random(96,144])
+
+x,y = np.meshgrid(lon,lat)
+
+contour_levs = np.linspace(-40,40,5)
+
+#cs = mp.contour(x,y,mapdata,cmap=plt.cm.RdBu_r,latlon=True,levels = contour_levs)
+cs = mp.pcolor(x,y,mapdata,cmap=plt.cm.RdBu_r,latlon=True,clim=[-50,50])
+cb = plt.colorbar()
+#cs = mp.pcolor(x,y,abs_grad,cmap=plt.cm.inferno,latlon=True)
+
+plt.title('$\Delta$ toa imbal [W/m$^2$] (alb, dark - light)')
+  
+
 #%% Plot points on top of roughness sensitivity map r^2 values
 #
 #[X,Y] = np.meshgrid(lon,lat)
@@ -813,4 +848,49 @@ plt.title('alb, highest; toa imbal')
 #    plt.close()        
 
        
-   
+#%% Sea ice change?
+# albedo:
+var = 'ICEFRAC'
+dice = {}
+dice['alb'] = ds_cam['global_a1_cv2_hc0.1_rs100_cheyenne'][var] - ds_cam['global_a3_cv2_hc0.1_rs100_cheyenne'][var]
+dice_ann = np.mean(dice['alb'],0)
+
+fig, axes = plt.subplots(1, 1, figsize=(6,4))
+
+ax0 = plt.gca()
+
+mp = Basemap(projection='robin',lon_0=180.,lat_0 = 0) # can't make it start anywhere other than 180???
+mp.drawcoastlines()
+mp.drawmapboundary(fill_color='1.')  # make map background white
+parallels = np.arange(-90.,90,20.)
+mp.drawparallels(parallels,labels=[1,0,0,0],fontsize=10,linewidth=0.5,dashes=[1,2])
+meridians = np.arange(0.,360.,20.)
+mp.drawmeridians(meridians,linewidth=0.5,dashes=[1,2])
+ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
+cmap_abs = plt.cm.viridis
+clim_abs = [0.5,1]    
+    
+mapdata = dice_ann
+
+grad = np.gradient(mapdata)
+
+abs_grad = np.sqrt(grad[0]**2 + grad[1]**2)
+
+#mapdata = np.random(96,144])
+
+x,y = np.meshgrid(lon,lat)
+
+contour_levs = np.linspace(-125,125,15)
+
+cs = mp.pcolor(x,y,mapdata,cmap=plt.cm.RdBu,latlon=True)
+cbar = mp.colorbar(cs,location='bottom',pad="5%",spacing='uniform')#,format='%.3f')
+
+cs.cmap.set_bad('white',1.)
+
+clim = [-0.3,0.3]
+
+cbar.set_clim(clim[0],clim[1])
+cs.set_clim(clim[0],clim[1])
+#cs = mp.pcolor(x,y,abs_grad,cmap=plt.cm.inferno,latlon=True)
+
+plt.title('$\Delta$ Sea Ice Fraction (alb, darkest - lightest)')

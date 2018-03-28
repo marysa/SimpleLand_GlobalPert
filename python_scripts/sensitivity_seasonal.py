@@ -31,6 +31,8 @@ from sklearn import linear_model
 
 import time
 
+from copy import copy
+
 from joblib import Parallel, delayed
 import multiprocessing
 
@@ -39,6 +41,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap, cm
 import brewer2mpl as cbrew
+from matplotlib import ticker
 
 from matplotlib.ticker import FormatStrFormatter
 
@@ -183,13 +186,13 @@ bareground_mask = np.where(np.isnan(ocn_glc_mask),1,np.nan)
 
 #%% Example line-plot of sensitivity (single point... do later, from actual slope analysis I do on full map below)
 
-do_sens_plots = 0
-do_line_plots = 1
+do_sens_plots = 1
+do_line_plots = 0
 
 do_slope_analysis = 1
 
-do_line_plots_fixed_axis = 1
-do_line_plots_fixed_range = 1
+do_line_plots_fixed_axis = 0
+do_line_plots_fixed_range = 0
 
 
 #%%
@@ -341,16 +344,16 @@ for prop in sfc_props:
         ds3 = ds_high[prop]
         
         # annual mean response
-        atm_resp_ann[prop] = [ds1.mean('time')[atm_var].values[:,:],
-            ds2.mean('time')[atm_var].values[:,:],
-            ds3.mean('time')[atm_var].values[:,:]]
+        atm_resp_ann[prop] = np.array([np.array(ds1.mean('time')[atm_var].values[:,:]),
+            np.array(ds2.mean('time')[atm_var].values[:,:]),
+            np.array(ds3.mean('time')[atm_var].values[:,:])])
     
         # seasonal responses:
         # (first, make 12 month response, then average over djf, jja, etc)
         #print(np.shape(ds1[atm_var].values))
-        resp_mths = np.array([ds1[atm_var].values[:,:,:],
-                ds2[atm_var].values[:,:,:],
-                ds3[atm_var].values[:,:,:]])
+        resp_mths = np.array([np.array(ds1[atm_var].values[:,:,:]),
+                np.array(ds2[atm_var].values[:,:,:]),
+                np.array(ds3[atm_var].values[:,:,:])])
     
     else:
         print(prop)
@@ -362,23 +365,23 @@ for prop in sfc_props:
         ds6 = ds_high2[prop]    #2
         
         # annual mean response
-        atm_resp_ann[prop] = [ds1.mean('time')[atm_var].values[:,:],
-            ds2.mean('time')[atm_var].values[:,:],
-            ds3.mean('time')[atm_var].values[:,:],
-            ds4.mean('time')[atm_var].values[:,:],
-            ds5.mean('time')[atm_var].values[:,:],
-            ds6.mean('time')[atm_var].values[:,:],
-            ]
+        atm_resp_ann[prop] = np.array([np.array(ds1.mean('time')[atm_var].values[:,:]),
+            np.array(ds2.mean('time')[atm_var].values[:,:]),
+            np.array(ds3.mean('time')[atm_var].values[:,:]),
+            np.array(ds4.mean('time')[atm_var].values[:,:]),
+            np.array(ds5.mean('time')[atm_var].values[:,:]),
+            np.array(ds6.mean('time')[atm_var].values[:,:]),
+            ])
     
         # seasonal responses:
         # (first, make 12 month response, then average over djf, jja, etc)
         #print(np.shape(ds1[atm_var].values))
-        resp_mths = np.array([ds1[atm_var].values[:,:,:],
-                ds2[atm_var].values[:,:,:],
-                ds3[atm_var].values[:,:,:],
-                ds4[atm_var].values[:,:,:],
-                ds5[atm_var].values[:,:,:],
-                ds6[atm_var].values[:,:,:],
+        resp_mths = np.array([np.array(ds1[atm_var].values[:,:,:]),
+                np.array(ds2[atm_var].values[:,:,:]),
+                np.array(ds3[atm_var].values[:,:,:]),
+                np.array(ds4[atm_var].values[:,:,:]),
+                np.array(ds5[atm_var].values[:,:,:]),
+                np.array(ds6[atm_var].values[:,:,:]),
                 ])
     
     print(np.shape(resp_mths))
@@ -536,6 +539,11 @@ if do_slope_analysis==1:
 
 #%% Sensitivity Plots
             
+cm_lnd = plt.cm.viridis
+cm_atm = plt.cm.viridis
+
+do_sens_plots=1
+            
 if do_sens_plots==1:
         
     myvar = 'TREFHT'
@@ -546,26 +554,46 @@ if do_sens_plots==1:
         if prop =='alb':
             clim_dlnd = [-0.01, 0.01]
             clim_datm = [-25,25]
+
+            
             units='unitless'
+            
+            cm_dlnd = plt.cm.viridis_r
+            cm_datm = plt.cm.viridis_r
+            
         elif prop =='hc':
             clim_dlnd = [-0.5,0.5]
             clim_datm = [-0.5,0.5]
             units='m'
+            
+            cm_dlnd = plt.cm.viridis_r
+            cm_datm = plt.cm.viridis_r
+            
         elif prop=='rs' :
             clim_dlnd = [-15.,15.]
             clim_datm = [-.025,.025]
+            
+            cm_dlnd = plt.cm.viridis_r
+            cm_datm = plt.cm.viridis_r
+            
             units='s/m'
         elif prop =='log_hc':
             clim_dlnd = [-0.5,0.5]
             clim_datm = [-0.25,0.25]
             units='m'
+            
+            cm_dlnd = plt.cm.viridis_r
+            cm_datm = plt.cm.viridis_r
         
         # Loop over seasons:
-        #seasons = ['ANN']
+        seasons = ['ANN']
         for sea in seasons:
          #   #%% ALBEDO - Unmasked
             
-        
+             
+            cm_dlnd = plt.cm.viridis_r
+            cm_datm = plt.cm.viridis_r
+
             #prop = 'alb'
             #myvar = 'TREFHT'
             ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
@@ -577,6 +605,88 @@ if do_sens_plots==1:
             mapdata_inv = slope[sea][prop]**(-1)
             mapdata_r2 = r_value[sea][prop]**2
             
+            # Loop through properties and reset ranges to reflect most areas; 
+            # also set datm/dlnd to be a change per reasonable amount of sfc
+            # and multiply mapdata accordingly, e.g. albedo instead of datm/d(1 alb), do datm/d(0.1 alb) 
+            # for dlnd/datm, do dlnd requred for an 0.1 delta T
+            if prop =='alb':
+                clim_dlnd = [-0.025, 0.0]
+                clim_datm = [-0.25, 0.0]
+                
+                mapdata_inv = mapdata_inv*0.1   # dlnd/datm = per 1K, make it per 0.1 K 
+                mapdata_slope = mapdata_slope*0.01   # datm/d(1 alb) -> datm/(d(0.01 alb))
+                
+                increment = 0.01
+                
+                cm_dlnd = copy(plt.cm.viridis)
+                cm_datm = copy(plt.cm.viridis_r)
+                
+                #cm_dlnd = plt.cm.hsv
+                #cm_datm = plt.cm.hsv
+                
+                units='unitless'
+            elif prop =='hc':
+                clim_dlnd = [-2.,2.]
+                clim_datm = [-0.3,0.3]
+                
+                mapdata_inv = mapdata_inv*0.1   # dlnd/datm = per 1K, make it per 0.1 K 
+                mapdata_slope = mapdata_slope*0.5   # datm/d(1 m hc) -> datm/(d(0.5 m hc))
+                
+                increment = 0.5
+                
+#                cm_dlnd = plt.cm.viridis_r
+#                cm_datm = plt.cm.viridis_r
+                
+            
+                cm_dlnd = plt.cm.terrain
+                cm_datm = plt.cm.terrain
+                
+                cm_dlnd = plt.cm.hsv#mml_cmap('wrbw')
+                cm_datm = copy(plt.cm.RdBu_r)
+                cm_dlnd = copy(plt.cm.RdBu_r)
+                #cm_dlnd = mml_cmap('wrbw')
+            
+                
+                #cm_dlnd = plt.cm.plasma_r
+                #cm_datm = plt.cm.plasma_r
+                
+                units='m'
+            elif prop=='rs' :
+                clim_dlnd = [0.0, 50.0]
+                clim_datm = [0.0, 0.18]
+                
+                mapdata_inv = mapdata_inv*0.1   # dlnd/datm = per 1K, make it per 0.1 K 
+                mapdata_slope = mapdata_slope*10   # datm/d(1 s/m rs ) -> datm/(d(10 s/m rs))
+                
+                increment = 10
+                
+                cm_dlnd = copy(plt.cm.viridis_r)
+                cm_datm = copy(plt.cm.viridis)
+                
+                cm_datm.set_under('k',0.0)
+                cm_dlnd.set_under('k',0.0)
+                
+                #cm_dlnd = plt.cm.terrain
+                #cm_datm = plt.cm.terrain
+                
+                units='s/m'
+            elif prop =='log_hc':
+                clim_dlnd = [-2.5,2.5]
+                clim_datm = [-0.25,0.25]
+                
+                mapdata_inv = mapdata_inv*0.1   # dlnd/datm = per 1K, make it per 0.1 K 
+                mapdata_slope = mapdata_slope*0.5   # datm/d(1 m hc) -> datm/(d(0.5 m hc))
+                
+                increment = 0.5
+                
+                cm_dlnd = plt.cm.viridis_r
+                cm_datm = plt.cm.viridis_r
+                
+                #cm_dlnd = plt.cm.plasma_r
+                #cm_datm = plt.cm.plasma_r
+                
+                units='m'
+            
             
             ttl_main = prop #'Albedo'
             filename = 'sens_slopes_'+prop+'_'+mask_name+'_'+sea
@@ -584,6 +694,7 @@ if do_sens_plots==1:
             
             cmap_abs = plt.cm.viridis
             cmap_diff = plt.cm.RdBu_r
+            
             
             fig, axes = plt.subplots(1, 3, figsize=(18,6))
             
@@ -597,34 +708,55 @@ if do_sens_plots==1:
             ttl = '$\delta$ '+prop+' per 0.1K change in T2m'
             #units = 'unitless'
             #clim_diff = [-.01,.01]
-            mapdata = mapdata_inv*0.1
+            mapdata = mapdata_inv
             #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units )   #plt.cm.BuPu_r
-            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_dlnd,ext='both',disc=True )
+            #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_dlnd,ext='both',disc=True )
+            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units)# ncol=NCo,nticks=NTik_dlnd,ext='both',disc=True )
             ax=ax0
+            
+            if prop == 'alb':
+                # ticks are running into each other
+                tick_locator = ticker.MaxNLocator(nbins=6)
+                cbar.locator = tick_locator
+                cbar.update_ticks()
+            
+            #if (prop =='hc') or (prop=='log_hc'):
+            #    cbar.norm()
+            
+            
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(12)
             #cbar.set_ticklabels(np.linspace(-0.01,0.01,9))
             ax1 = axes.flatten()[1]
             plt.sca(ax1)
-            ttl = '$\delta$ T2m per unit change in '+prop
-            units = 'K'
+            ttl = '$\delta$ T2m per '+np.str(increment) +' [' +units+'] change in '+prop
+            units_K = 'K'
            # clim_diff = [-25,25]
             #clim_abs = clim_diff
             mapdata = mapdata_slope
             #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units )   #plt.cm.BuPu_r
-            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_datm,ext='both',disc=True )
+            #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_datm,ext='both',disc=True )
+            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units_K)
             ax=ax1
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(12)
             
+            #if prop == 'rs':
+            if prop == prop:
+                # ticks are running into each other
+                tick_locator = ticker.MaxNLocator(nbins=6)
+                cbar.locator = tick_locator
+                cbar.update_ticks()
+            
             ax2 = axes.flatten()[2]
             plt.sca(ax2)
             ttl = 'r^2'
-            units = 'r^2'
+            units_r = 'r^2'
             clim_abs = [0.5,1]
             mapdata = mapdata_r2
             #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units )   #plt.cm.BuPu_r
-            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_r2,ext='min')
+            #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_r2,ext='min')
+            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units_r, ncol=NCo,nticks=NTik_r2,ext='min')
             ax=ax2
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(12)
@@ -637,65 +769,67 @@ if do_sens_plots==1:
                      ha = 'left',va = 'center',
                      transform = ax0.transAxes)
             
-            fig_name = figpath+'/sensitivity/'+filename+'.eps'
-            fig.savefig(fig_name,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches='tight', 
-                        pad_inches=0.1,frameon=None)
+#            fig_name = figpath+'/sensitivity/'+filename+'.eps'
+#            fig.savefig(fig_name,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches='tight', 
+#                        pad_inches=0.1,frameon=None)
             
-            fig_name = figpath+'/sensitivity/'+filename+'.png'
+            plt.show()
+            
+            fig_name = figpath+'/sensitivity/new_colourbar/'+filename+'.png'
             fig.savefig(fig_name,dpi=600,transparent=True,facecolor='w',
                         edgecolor='w',orientation='portrait',bbox_inches='tight', 
                         pad_inches=0.1,frameon=None)
      
-            # Save the sub-plots as individual panels
-            
-            # (a) dlnd/datm
-            extent = ax0.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig_png = figpath+'/sensitivity/subplots/'+filename+'_a.png'
-            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_a.eps'
-            vals = extent.extents
-            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
-            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            
-            # (b) datm/dlnd
-            # add datetime tag
-            # Annotate with season, variable, date
-            ax1.text(0.,-0.35,time.strftime("%x")+'\n'+sea +', '+prop ,fontsize='10',
-                     ha = 'left',va = 'center',
-                     transform = ax1.transAxes)
-            extent = ax1.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig_png = figpath+'/sensitivity/subplots/'+filename+'_b.png'
-            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_b.eps'
-            vals = extent.extents
-            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
-            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            
-            # (c) r^2
-            # Annotate with season, variable, date
-            ax2.text(0.,-0.35,time.strftime("%x")+'\n'+sea +', '+prop ,fontsize='10',
-                     ha = 'left',va = 'center',
-                     transform = ax2.transAxes)
-            extent = ax2.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig_png = figpath+'/sensitivity/subplots/'+filename+'_c.png'
-            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_c.eps'
-            vals = extent.extents
-            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
-            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
+#            # Save the sub-plots as individual panels
+#            
+#            # (a) dlnd/datm
+#            extent = ax0.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#            fig_png = figpath+'/sensitivity/subplots/'+filename+'_a.png'
+#            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_a.eps'
+#            vals = extent.extents
+#            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
+#            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+#                        frameon=None)
+##            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
+##                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+##                        frameon=None)
+#            
+#            # (b) datm/dlnd
+#            # add datetime tag
+#            # Annotate with season, variable, date
+#            ax1.text(0.,-0.35,time.strftime("%x")+'\n'+sea +', '+prop ,fontsize='10',
+#                     ha = 'left',va = 'center',
+#                     transform = ax1.transAxes)
+#            extent = ax1.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#            fig_png = figpath+'/sensitivity/subplots/'+filename+'_b.png'
+#            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_b.eps'
+#            vals = extent.extents
+#            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
+#            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+#                        frameon=None)
+##            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
+##                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+##                        frameon=None)
+#            
+#            # (c) r^2
+#            # Annotate with season, variable, date
+#            ax2.text(0.,-0.35,time.strftime("%x")+'\n'+sea +', '+prop ,fontsize='10',
+#                     ha = 'left',va = 'center',
+#                     transform = ax2.transAxes)
+#            extent = ax2.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#            fig_png = figpath+'/sensitivity/subplots/'+filename+'_c.png'
+#            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_c.eps'
+#            vals = extent.extents
+#            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
+#            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+#                        frameon=None)
+##            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
+##                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+##                        frameon=None)
     
            
             plt.close()
@@ -710,9 +844,9 @@ if do_sens_plots==1:
             mask_name = 'lndmask'
             #sea = 'ANN'
             
-            mapdata_slope = slope[sea][prop]
-            mapdata_inv = slope[sea][prop]**(-1)
-            mapdata_r2 = r_value[sea][prop]**2
+#            mapdata_slope = slope[sea][prop]
+#            mapdata_inv = slope[sea][prop]**(-1)
+#            mapdata_r2 = r_value[sea][prop]**2
             
             
             ttl_main = prop #'Albedo'
@@ -729,39 +863,53 @@ if do_sens_plots==1:
             ttl = '$\delta$ '+prop+' per 0.1K change in T2m'
             #units = 'unitless'
             #clim_diff = [-.01,.01]
-            mapdata = mapdata_inv*0.1*bareground_mask
+            mapdata = mapdata_inv*bareground_mask
             mapdata = np.ma.masked_where(np.isnan(mapdata),mapdata)
             #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units, ncol=NCo,nticks=NTik,ext='both',disc=True )   #plt.cm.BuPu_r
-            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_dlnd,ext='both',disc=True )
+            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units)#, ncol=NCo,nticks=NTik_dlnd,ext='both',disc=True )
             ax=ax0
            # mml_map(LN,LT,mapdata,ds,myvar,proj,title=None,clim=None,colmap=None,cb_ttl=None,disc=None,ncol=None,nticks=None,ext=None):
-       
+           
+            if prop == 'alb':
+                # ticks are running into each other
+                tick_locator = ticker.MaxNLocator(nbins=6)
+                cbar.locator = tick_locator
+                cbar.update_ticks()
+                
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(12)
             
             ax1 = axes.flatten()[1]
             plt.sca(ax1)
-            ttl = '$\delta$ T2m per unit change in '+prop
-            units = 'K'
+            ttl = '$\delta$ T2m per '+np.str(increment) +' [' +units+'] change in '+prop
+            units_K = 'K'
             #clim_diff = [-25,25]
             #clim_abs = clim_diff
             mapdata = mapdata_slope*bareground_mask
             mapdata = np.ma.masked_where(np.isnan(mapdata),mapdata)
             #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units )   #plt.cm.BuPu_r
-            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_datm,ext='both',disc=True )
+            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units_K)#, ncol=NCo,nticks=NTik_datm,ext='both',disc=True )
             ax=ax1
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(12)
-            
+                
+            #if prop == 'rs':
+            if prop == prop:
+                # ticks are running into each other
+                tick_locator = ticker.MaxNLocator(nbins=6)
+                cbar.locator = tick_locator
+                cbar.update_ticks()
+                
+                
             ax2 = axes.flatten()[2]
             plt.sca(ax2)
             ttl = 'r^2'
-            units = 'r^2'
+            units_r = 'r^2'
             clim_abs = [0.5,1]
             mapdata = mapdata_r2*bareground_mask
             mapdata = np.ma.masked_where(np.isnan(mapdata),mapdata)
             #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units )   #plt.cm.BuPu_r
-            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_r2,ext='min')
+            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units_r, ncol=NCo,nticks=NTik_r2,ext='min')
             ax=ax2
             for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(12)
@@ -775,12 +923,12 @@ if do_sens_plots==1:
                      transform = ax0.transAxes)
             
             
-            fig_name = figpath+'/sensitivity/'+filename+'.eps'
-            fig.savefig(fig_name,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches='tight', 
-                        pad_inches=0.1,frameon=None)
-            
-            fig_name = figpath+'/sensitivity/'+filename+'.png'
+#            fig_name = figpath+'/sensitivity/'+filename+'.eps'
+#            fig.savefig(fig_name,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches='tight', 
+#                        pad_inches=0.1,frameon=None)
+#            
+            fig_name = figpath+'/sensitivity/new_colourbar/'+filename+'.png'
             fig.savefig(fig_name,dpi=600,transparent=True,facecolor='w',
                         edgecolor='w',orientation='portrait',bbox_inches='tight', 
                         pad_inches=0.1,frameon=None)
@@ -820,9 +968,9 @@ if do_sens_plots==1:
             fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
                         edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
                         frameon=None)
-            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
+#            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+#                        frameon=None)
             
             # (c) r^2
             # Annotate with season, variable, date
@@ -837,145 +985,160 @@ if do_sens_plots==1:
             fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
                         edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
                         frameon=None)
-            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
+#            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+#                        frameon=None)
             
             plt.close()
             
             
-        #    #%% ALBEDO - ocn mask
-            
-            
-           # prop = 'alb'
-            #myvar = 'TREFHT'
-            ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
-            mask_name = 'ocnmask'
-            #sea = 'ANN'
-            
-            mapdata_slope = slope[sea][prop]
-            mapdata_inv = slope[sea][prop]**(-1)
-            mapdata_r2 = r_value[sea][prop]**2
-            
-            
-            ttl_main = prop #'Albedo'
-            filename = 'sens_slopes_'+prop+'_'+mask_name+'_'+sea
-            
-            
-            cmap_abs = plt.cm.viridis
-            cmap_diff = plt.cm.RdBu_r
-            
-            fig, axes = plt.subplots(1, 3, figsize=(18,6))
-            
-            ax0 = axes.flatten()[0]
-            plt.sca(ax0)
-            ttl = '$\delta$ '+prop+' per 0.1K change in T2m'
-            #units = 'unitless'
-            #clim_diff = [-.01,.01]
-            mapdata = mapdata_inv*0.1*ocn_glc_mask
-            mapdata = np.ma.masked_where(np.isnan(mapdata),mapdata)
-            #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units )   #plt.cm.BuPu_r
-            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_dlnd,ext='both',disc=True )
-            ax=ax0
-            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
-                item.set_fontsize(12)
-            
-            ax1 = axes.flatten()[1]
-            plt.sca(ax1)
-            ttl = '$\delta$ T2m per unit change in '+prop
-            units = 'K'
-            #clim_diff = [-25,25]
-            #clim_abs = clim_diff
-            mapdata = mapdata_slope*ocn_glc_mask
-            mapdata = np.ma.masked_where(np.isnan(mapdata),mapdata)
-            #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units )   #plt.cm.BuPu_r
-            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_datm,ext='both',disc=True )
-            ax=ax1
-            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
-                item.set_fontsize(12)
-            
-            ax2 = axes.flatten()[2]
-            plt.sca(ax2)
-            ttl = 'r^2'
-            units = 'r^2'
-            clim_abs = [0.5,1]
-            mapdata = mapdata_r2*ocn_glc_mask
-            mapdata = np.ma.masked_where(np.isnan(mapdata),mapdata)
-            #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units )   #plt.cm.BuPu_r
-            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units, ncol=NCo,nticks=NTik_r2,ext='min')
-            ax=ax2
-            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
-                item.set_fontsize(12)
-            
-            fig.subplots_adjust(top=1.15)
-            fig.suptitle(ttl_main, fontsize=20)    
-            
-            # Annotate with season, variable, date
-            ax0.text(0.,-0.35,time.strftime("%x")+'\n'+sea +', '+prop ,fontsize='10',
-                     ha = 'left',va = 'center',
-                     transform = ax0.transAxes)
-            
-            fig_name = figpath+'/sensitivity/'+filename+'.eps'
-            fig.savefig(fig_name,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches='tight', 
-                        pad_inches=0.1,frameon=None)
-            
-            fig_name = figpath+'/sensitivity/'+filename+'.png'
-            fig.savefig(fig_name,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches='tight', 
-                        pad_inches=0.1,frameon=None)
-    
-            # Save the sub-plots as individual panels
-            
-            # (a) dlnd/datm
-            extent = ax0.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig_png = figpath+'/sensitivity/subplots/'+filename+'_a.png'
-            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_a.eps'
-            vals = extent.extents
-            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
-            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            
-            # (b) datm/dlnd
-            # add datetime tag
-            # Annotate with season, variable, date
-            ax1.text(0.,-0.35,time.strftime("%x")+'\n'+sea +', '+prop ,fontsize='10',
-                     ha = 'left',va = 'center',
-                     transform = ax1.transAxes)
-            extent = ax1.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig_png = figpath+'/sensitivity/subplots/'+filename+'_b.png'
-            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_b.eps'
-            vals = extent.extents
-            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
-            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            
-            # (c) r^2
-            # Annotate with season, variable, date
-            ax2.text(0.,-0.35,time.strftime("%x")+'\n'+sea +', '+prop ,fontsize='10',
-                     ha = 'left',va = 'center',
-                     transform = ax2.transAxes)
-            extent = ax2.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-            fig_png = figpath+'/sensitivity/subplots/'+filename+'_c.png'
-            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_c.eps'
-            vals = extent.extents
-            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
-            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
-                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
-                        frameon=None)
-            
-            plt.close()
+#        #    #%% ALBEDO - ocn mask
+#            
+#            
+#           # prop = 'alb'
+#            #myvar = 'TREFHT'
+#            ds0 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
+#            mask_name = 'ocnmask'
+#            #sea = 'ANN'
+#            
+##            mapdata_slope = slope[sea][prop]
+##            mapdata_inv = slope[sea][prop]**(-1)
+##            mapdata_r2 = r_value[sea][prop]**2
+#            
+#            
+#            ttl_main = prop #'Albedo'
+#            filename = 'sens_slopes_'+prop+'_'+mask_name+'_'+sea
+#            
+#            
+#            cmap_abs = plt.cm.viridis
+#            cmap_diff = plt.cm.RdBu_r
+#            
+#            fig, axes = plt.subplots(1, 3, figsize=(18,6))
+#            
+#            ax0 = axes.flatten()[0]
+#            plt.sca(ax0)
+#            ttl = '$\delta$ '+prop+' per 0.1K change in T2m'
+#            #units = 'unitless'
+#            #clim_diff = [-.01,.01]
+#            mapdata = mapdata_inv*ocn_glc_mask
+#            mapdata = np.ma.masked_where(np.isnan(mapdata),mapdata)
+#            #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units )   #plt.cm.BuPu_r
+#            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_dlnd,colmap=cm_dlnd, cb_ttl='units: '+units)#, ncol=NCo,nticks=NTik_dlnd,ext='both',disc=True )
+#            ax=ax0
+#            
+#            if prop == 'alb' :
+#                # ticks are running into each other
+#                tick_locator = ticker.MaxNLocator(nbins=6)
+#                cbar.locator = tick_locator
+#                cbar.update_ticks()
+#                
+#            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+#                item.set_fontsize(12)
+#            
+#            ax1 = axes.flatten()[1]
+#            plt.sca(ax1)
+#            ttl = '$\delta$ T2m per '+np.str(increment) +' [' +units+'] change in '+prop
+#            units = 'K'
+#            #clim_diff = [-25,25]
+#            #clim_abs = clim_diff
+#            mapdata = mapdata_slope*ocn_glc_mask
+#            mapdata = np.ma.masked_where(np.isnan(mapdata),mapdata)
+#            #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units )   #plt.cm.BuPu_r
+#            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_datm,colmap=cm_datm, cb_ttl='units: '+units)#, ncol=NCo,nticks=NTik_datm,ext='both',disc=True )
+#            ax=ax1
+#            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+#                item.set_fontsize(12)
+#                
+#            #if prop == 'rs':
+#            if prop == prop:
+#                # ticks are running into each other
+#                tick_locator = ticker.MaxNLocator(nbins=6)
+#                cbar.locator = tick_locator
+#                cbar.update_ticks()
+#                
+#                
+#            ax2 = axes.flatten()[2]
+#            plt.sca(ax2)
+#            ttl = 'r^2'
+#            units_r = 'r^2'
+#            clim_abs = [0.5,1]
+#            mapdata = mapdata_r2*ocn_glc_mask
+#            mapdata = np.ma.masked_where(np.isnan(mapdata),mapdata)
+#            #mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units )   #plt.cm.BuPu_r
+#            mp, cbar, cs = mml_map(LN,LT,mapdata,ds0,myvar,'moll',title=ttl,clim=clim_abs,colmap=cmap_abs, cb_ttl='units: '+units_r, ncol=NCo,nticks=NTik_r2,ext='min')
+#            ax=ax2
+#            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels()):
+#                item.set_fontsize(12)
+#            
+#            fig.subplots_adjust(top=1.15)
+#            fig.suptitle(ttl_main, fontsize=20)    
+#            
+#            # Annotate with season, variable, date
+#            ax0.text(0.,-0.35,time.strftime("%x")+'\n'+sea +', '+prop ,fontsize='10',
+#                     ha = 'left',va = 'center',
+#                     transform = ax0.transAxes)
+#            
+##            fig_name = figpath+'/sensitivity/'+filename+'.eps'
+##            fig.savefig(fig_name,dpi=600,transparent=True,facecolor='w',
+##                        edgecolor='w',orientation='portrait',bbox_inches='tight', 
+##                        pad_inches=0.1,frameon=None)
+#            
+#            fig_name = figpath+'/sensitivity/new_colourbar/'+filename+'.png'
+#            fig.savefig(fig_name,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches='tight', 
+#                        pad_inches=0.1,frameon=None)
+#    
+#            # Save the sub-plots as individual panels
+#            
+#            # (a) dlnd/datm
+#            extent = ax0.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#            fig_png = figpath+'/sensitivity/subplots/'+filename+'_a.png'
+#            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_a.eps'
+#            vals = extent.extents
+#            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
+#            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+#                        frameon=None)
+##            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
+##                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+##                        frameon=None)
+#            
+#            # (b) datm/dlnd
+#            # add datetime tag
+#            # Annotate with season, variable, date
+#            ax1.text(0.,-0.35,time.strftime("%x")+'\n'+sea +', '+prop ,fontsize='10',
+#                     ha = 'left',va = 'center',
+#                     transform = ax1.transAxes)
+#            extent = ax1.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#            fig_png = figpath+'/sensitivity/subplots/'+filename+'_b.png'
+#            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_b.eps'
+#            vals = extent.extents
+#            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
+#            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+#                        frameon=None)
+##            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
+##                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+##                        frameon=None)
+#            
+#            # (c) r^2
+#            # Annotate with season, variable, date
+#            ax2.text(0.,-0.35,time.strftime("%x")+'\n'+sea +', '+prop ,fontsize='10',
+#                     ha = 'left',va = 'center',
+#                     transform = ax2.transAxes)
+#            extent = ax2.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#            fig_png = figpath+'/sensitivity/subplots/'+filename+'_c.png'
+#            fig_eps = figpath+'/sensitivity/subplots/'+filename+'_c.eps'
+#            vals = extent.extents
+#            new_extent = extent.from_extents(vals[0]-0.45,vals[1]-1.,vals[2]+0.25,vals[3]+0.45)
+#            fig.savefig(fig_png,dpi=600,transparent=True,facecolor='w',
+#                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+#                        frameon=None)
+##            fig.savefig(fig_eps,dpi=600,transparent=True,facecolor='w',
+##                        edgecolor='w',orientation='portrait',bbox_inches=new_extent.expanded(1.,1.), 
+##                        frameon=None)
+#            
+#            plt.close()
             
             
         # end seasonal loop.
@@ -1050,7 +1213,7 @@ locations['Mongolia']['loc_y'] = 73
 locations['Mongolia']['col'] = 'dodgerblue'
 
 #%% Plot locations
-make_maps=0
+make_maps=1
 if make_maps==1:
     
     for nm in location_names:
@@ -1060,10 +1223,10 @@ if make_maps==1:
         
         # First order of business: Find the point! 
         
-        ds1 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
-        lat = ds1.lat.values
-        lon = ds1.lon.values
-        lev = ds1.lev.values
+#        ds1 = ds_cam['global_a2_cv2_hc0.1_rs100_cheyenne']
+#        lat = ds1.lat.values
+#        lon = ds1.lon.values
+#        lev = ds1.lev.values
         
         fig = plt.figure(figsize=(8,8))
         ax = fig.add_axes([0.1,0.1,0.8,0.8])
@@ -1085,13 +1248,15 @@ if make_maps==1:
         #idx_y = 40
         
         x, y = mp(idx_x,idx_y)
-        print(ds1.lat.values[idx_y])
-        print(ds1.lon.values[idx_x])
-        print(x)
-        print(y)
+#        print(ds1.lat.values[idx_y])
+#        print(ds1.lon.values[idx_x])
+#        print(x)
+#        print(y)
         
-        lon_temp = ds1.lon.values[idx_x]
-        lat_temp = ds1.lat.values[idx_y]
+#        lon_temp = ds1.lon.values[idx_x]
+#        lat_temp = ds1.lat.values[idx_y]
+        lon_temp = lon[idx_x]
+        lat_temp = lat[idx_y]
         x, y = mp(lon_temp,lat_temp)
         mp.plot(x,y,'D-', markersize=8, linewidth=4, color='k', markerfacecolor='m')
         ttl = 'Location for Linear Point Analysis: '+np.str(lat_temp)+'N, '+np.str(lon_temp)+'E'
